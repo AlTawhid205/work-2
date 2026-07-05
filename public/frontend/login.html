@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>document.documentElement.setAttribute('data-theme', localStorage.getItem('nv-theme') || 'light');</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NutriVerse — Login</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: {
+    bg: '#F7FAF8', primary: '#1FAE7A', accent: '#FF8A65', text: '#1D2A24'
+  } } } }
+</script>
+<link rel="stylesheet" href="/css/theme.css">
+<script src="/js/theme.js" defer></script>
+</head>
+<body class="min-h-screen flex items-center justify-center px-6 relative overflow-hidden">
+
+<div class="blob w-72 h-72 bg-primary -top-10 -left-10"></div>
+<div class="blob w-64 h-64 bg-accent bottom-0 -right-10" style="animation-delay:2s"></div>
+
+<div class="w-full max-w-sm relative z-10 fade-up">
+<div class="text-center mb-6 flex items-center justify-center gap-3">
+<a href="/index.html" class="brand-mark text-2xl">🥗 NutriVerse</a>
+<button class="themeToggleBtn icon-btn" aria-label="Toggle dark mode">🌙</button>
+</div>
+
+<div class="card p-8">
+<h1 class="font-display font-700 text-2xl mb-1">Welcome back</h1>
+<p class="text-[--text-soft] text-sm mb-6">Sign in to manage the food database.</p>
+
+<form id="loginForm" class="space-y-4">
+<div>
+<label class="text-sm font-medium block mb-1">Email</label>
+<input id="email" type="email" class="input" value="admin@nutriverse.com" required>
+</div>
+<div>
+<label class="text-sm font-medium block mb-1">Password</label>
+<input id="password" type="password" class="input" value="admin123" required>
+</div>
+<button type="submit" class="btn btn-primary w-full">Log in</button>
+</form>
+
+<p id="errorMsg" class="text-sm mt-4 hidden" style="color:#C2410C"></p>
+<p class="text-xs text-center mt-6 text-[--text-soft]">Demo credentials are pre-filled.</p>
+</div>
+
+<p class="text-center mt-6"><a href="/index.html" class="nav-link">← Back to home</a></p>
+</div>
+
+<script>
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+  const errorMsg = document.getElementById('errorMsg');
+  errorMsg.classList.add('hidden');
+
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Login failed');
+    window.location.href = '/frontend/admin-dashboard.html';
+  } catch (err) {
+    errorMsg.textContent = err.message;
+    errorMsg.classList.remove('hidden');
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>document.documentElement.setAttribute('data-theme', localStorage.getItem('nv-theme') || 'light');</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NutriVerse — Favorites</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: {
+    bg: '#F7FAF8', primary: '#1FAE7A', accent: '#FF8A65', text: '#1D2A24'
+  } } } }
+</script>
+<link rel="stylesheet" href="/css/theme.css">
+<script src="/js/theme.js" defer></script>
+</head>
+<body>
+
+<header class="site-header sticky top-0 z-30">
+<div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+<a href="/index.html" class="brand-mark text-2xl">🥗 NutriVerse</a>
+<nav class="hidden md:flex gap-8 items-center">
+<a href="/index.html" class="nav-link">Home</a>
+<a href="/compare-foods.html" class="nav-link">Compare</a>
+<a href="/daily-vitamin-calculator.html" class="nav-link">Calculator</a>
+<a href="/favorites.html" class="nav-link active">Favorites</a>
+<button class="themeToggleBtn icon-btn" aria-label="Toggle dark mode">🌙</button>
+</nav>
+<div class="flex items-center gap-2 md:hidden">
+<button class="themeToggleBtn icon-btn" aria-label="Toggle dark mode">🌙</button>
+<button id="menuBtn" class="btn btn-outline btn-sm" aria-label="Menu">☰</button>
+</div>
+</div>
+<nav id="mobileMenu" class="hidden md:hidden flex-col px-6 pb-4 gap-3">
+<a href="/index.html" class="nav-link">Home</a>
+<a href="/compare-foods.html" class="nav-link">Compare</a>
+<a href="/daily-vitamin-calculator.html" class="nav-link">Calculator</a>
+<a href="/favorites.html" class="nav-link active">Favorites</a>
+</nav>
+</header>
+
+<div class="max-w-6xl mx-auto px-6 py-10">
+<div class="fade-up mb-8">
+<h1 class="font-display font-800 text-3xl md:text-4xl mb-2">♥ Your favorites</h1>
+<p class="text-[--text-soft]">Saved from food detail pages.</p>
+</div>
+
+<div id="favGrid" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+<div class="skeleton h-44"></div>
+<div class="skeleton h-44"></div>
+</div>
+</div>
+
+<footer class="site-footer">
+<div class="max-w-6xl mx-auto px-6 py-10 text-sm">© 2026 NutriVerse — Demo Nutrition Database</div>
+</footer>
+
+<script>
+const menuBtn = document.getElementById('menuBtn');
+const mobileMenu = document.getElementById('mobileMenu');
+menuBtn.addEventListener('click', () => {
+  mobileMenu.classList.toggle('flex');
+  mobileMenu.classList.toggle('hidden');
+});
+
+async function loadFavorites() {
+  const grid = document.getElementById('favGrid');
+  const res = await fetch('/api/favorites');
+  const foods = await res.json();
+  if (!foods.length) {
+    grid.innerHTML = `
+      <div class="card p-12 col-span-full text-center fade-up">
+        <div class="text-5xl mb-4">🤍</div>
+        <p class="font-display font-700 text-xl mb-2">No favorites yet</p>
+        <p class="text-[--text-soft] text-sm mb-5">Add foods to favorites from their detail page.</p>
+        <a href="/index.html" class="btn btn-primary inline-flex">Browse foods</a>
+      </div>
+    `;
+    return;
+  }
+  grid.innerHTML = foods.map((f, i) => `
+    <div class="card card-hover p-5 flex flex-col gap-3 fade-up fade-up-${Math.min(8, i + 1)}">
+      <a href="/food-details.html?id=${f.id}" class="text-center">
+        <div class="text-5xl mb-1">${f.emoji || '🍽️'}</div>
+        <h2 class="font-display font-700 text-lg">${f.name}</h2>
+      </a>
+      <button class="btn btn-danger btn-sm removeBtn" data-id="${f.id}">Remove</button>
+    </div>
+  `).join('');
+
+  document.querySelectorAll('.removeBtn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await fetch(`/api/favorites/${btn.dataset.id}`, { method: 'DELETE' });
+      loadFavorites();
+    });
+  });
+}
+
+loadFavorites();
+</script>
+</body>
+</html>

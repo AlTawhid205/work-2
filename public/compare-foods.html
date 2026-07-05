@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>document.documentElement.setAttribute('data-theme', localStorage.getItem('nv-theme') || 'light');</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NutriVerse — Compare Foods</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: {
+    bg: '#F7FAF8', primary: '#1FAE7A', accent: '#FF8A65', text: '#1D2A24'
+  } } } }
+</script>
+<link rel="stylesheet" href="/css/theme.css">
+<script src="/js/theme.js" defer></script>
+</head>
+<body>
+
+<header class="site-header sticky top-0 z-30">
+<div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+<a href="/index.html" class="brand-mark text-2xl">🥗 NutriVerse</a>
+<nav class="hidden md:flex gap-8 items-center">
+<a href="/index.html" class="nav-link">Home</a>
+<a href="/compare-foods.html" class="nav-link active">Compare</a>
+<a href="/daily-vitamin-calculator.html" class="nav-link">Calculator</a>
+<a href="/favorites.html" class="nav-link">Favorites</a>
+<button class="themeToggleBtn icon-btn" aria-label="Toggle dark mode">🌙</button>
+</nav>
+<div class="flex items-center gap-2 md:hidden">
+<button class="themeToggleBtn icon-btn" aria-label="Toggle dark mode">🌙</button>
+<button id="menuBtn" class="btn btn-outline btn-sm" aria-label="Menu">☰</button>
+</div>
+</div>
+<nav id="mobileMenu" class="hidden md:hidden flex-col px-6 pb-4 gap-3">
+<a href="/index.html" class="nav-link">Home</a>
+<a href="/compare-foods.html" class="nav-link active">Compare</a>
+<a href="/daily-vitamin-calculator.html" class="nav-link">Calculator</a>
+<a href="/favorites.html" class="nav-link">Favorites</a>
+</nav>
+</header>
+
+<div class="max-w-6xl mx-auto px-6 py-10">
+<div class="fade-up mb-8">
+<h1 class="font-display font-800 text-3xl md:text-4xl mb-2">Compare foods</h1>
+<p class="text-[--text-soft]">Pick any two foods to see how they stack up.</p>
+</div>
+
+<div class="card p-5 flex flex-wrap gap-4 items-end mb-8 fade-up fade-up-1">
+  <div>
+    <label class="text-xs text-[--text-soft] block mb-1">Food A</label>
+    <select id="selectA" class="input"></select>
+  </div>
+  <span class="font-display font-700 text-[--text-soft]">vs</span>
+  <div>
+    <label class="text-xs text-[--text-soft] block mb-1">Food B</label>
+    <select id="selectB" class="input"></select>
+  </div>
+  <button id="compareBtn" class="btn btn-primary">Compare</button>
+</div>
+
+<div id="result" class="space-y-6">
+<div class="skeleton h-80"></div>
+</div>
+</div>
+
+<footer class="site-footer">
+<div class="max-w-6xl mx-auto px-6 py-10 text-sm">© 2026 NutriVerse — Demo Nutrition Database</div>
+</footer>
+
+<script>
+let allFoods = [];
+
+const menuBtn = document.getElementById('menuBtn');
+const mobileMenu = document.getElementById('mobileMenu');
+menuBtn.addEventListener('click', () => {
+  mobileMenu.classList.toggle('flex');
+  mobileMenu.classList.toggle('hidden');
+});
+
+function foodHeader(f) {
+  return `<div class="text-center"><div class="text-5xl mb-2">${f.emoji || ''}</div><h2 class="font-display font-700 text-xl">${f.name}</h2><span class="badge badge-neutral mt-1">${f.category}</span></div>`;
+}
+
+function compareBar(label, a, b, unit, higherIsBetter = true) {
+  const max = Math.max(a, b, 0.01);
+  const pctA = Math.round((a / max) * 100);
+  const pctB = Math.round((b / max) * 100);
+  const aWins = higherIsBetter ? a > b : a < b;
+  const bWins = higherIsBetter ? b > a : b < a;
+  return `
+    <div>
+      <div class="flex justify-between text-sm mb-1"><span class="text-[--text-soft]">${label}</span></div>
+      <div class="grid grid-cols-[1fr_auto_1fr] gap-3 items-center">
+        <div class="progress-track"><div class="progress-fill" style="width:${pctA}%; background:${aWins ? 'var(--primary)' : '#CBD5D1'}; margin-left:auto;"></div></div>
+        <span class="text-xs font-medium w-20 text-center">${a}${unit} ${aWins ? '🏆' : ''}</span>
+        <div class="progress-track"><div class="progress-fill" style="width:${pctB}%; background:${bWins ? 'var(--primary)' : '#CBD5D1'};"></div></div>
+      </div>
+    </div>
+  `;
+}
+
+async function init() {
+  const res = await fetch('/api/foods');
+  allFoods = await res.json();
+  const options = allFoods.map(f => `<option value="${f.id}">${f.emoji || ''} ${f.name}</option>`).join('');
+  document.getElementById('selectA').innerHTML = options;
+  document.getElementById('selectB').innerHTML = options;
+  if (allFoods.length > 1) document.getElementById('selectB').selectedIndex = 3 % allFoods.length;
+  compare();
+}
+
+async function compare() {
+  const idA = document.getElementById('selectA').value;
+  const idB = document.getElementById('selectB').value;
+  const res = await fetch(`/api/compare?ids=${idA},${idB}`);
+  const [a, b] = await res.json();
+  if (!a || !b) return;
+
+  document.getElementById('result').innerHTML = `
+    <div class="grid md:grid-cols-2 gap-6 fade-up">
+      <div class="card p-6">${foodHeader(a)}</div>
+      <div class="card p-6">${foodHeader(b)}</div>
+    </div>
+    <div class="card p-6 md:p-8 fade-up fade-up-1">
+      <h3 class="font-display font-700 text-lg mb-6 text-center">Nutrient comparison <span class="text-[--text-soft] font-normal text-sm">(per 100g)</span></h3>
+      <div class="space-y-5">
+        ${compareBar('Calories (kcal)', a.calories, b.calories, '', false)}
+        ${compareBar('Protein (g)', a.protein, b.protein, '')}
+        ${compareBar('Fat (g)', a.fat, b.fat, '', false)}
+        ${compareBar('Carbs (g)', a.carbs, b.carbs, '')}
+        ${compareBar('Fiber (g)', a.fiber, b.fiber, '')}
+        ${compareBar('Sugar (g)', a.sugar ?? 0, b.sugar ?? 0, '', false)}
+        ${compareBar('Vitamin C (%DV)', a.vitaminC ?? 0, b.vitaminC ?? 0, '')}
+      </div>
+      <p class="text-xs text-[--text-soft] mt-6 text-center">🏆 marks the generally more favorable value for that nutrient.</p>
+    </div>
+  `;
+}
+
+document.getElementById('compareBtn').addEventListener('click', compare);
+init();
+</script>
+</body>
+</html>

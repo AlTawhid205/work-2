@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>document.documentElement.setAttribute('data-theme', localStorage.getItem('nv-theme') || 'light');</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NutriVerse — Know Your Food</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: {
+    bg: '#F7FAF8', primary: '#1FAE7A', accent: '#FF8A65', text: '#1D2A24'
+  } } } }
+</script>
+<link rel="stylesheet" href="/css/theme.css">
+<script src="/js/theme.js" defer></script>
+</head>
+<body class="overflow-x-hidden">
+
+<header class="site-header sticky top-0 z-30">
+<div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+<a href="/index.html" class="brand-mark text-2xl">🥗 NutriVerse</a>
+<nav class="hidden md:flex gap-8 items-center">
+<a href="/index.html" class="nav-link active">Home</a>
+<a href="/compare-foods.html" class="nav-link">Compare</a>
+<a href="/daily-vitamin-calculator.html" class="nav-link">Calculator</a>
+<a href="/favorites.html" class="nav-link">Favorites</a>
+<button class="themeToggleBtn icon-btn" aria-label="Toggle dark mode">🌙</button>
+<a href="/frontend/login.html" class="btn btn-outline btn-sm">Login</a>
+</nav>
+<div class="flex items-center gap-2 md:hidden">
+<button class="themeToggleBtn icon-btn" aria-label="Toggle dark mode">🌙</button>
+<button id="menuBtn" class="btn btn-outline btn-sm" aria-label="Menu">☰</button>
+</div>
+</div>
+<nav id="mobileMenu" class="hidden md:hidden flex-col px-6 pb-4 gap-3">
+<a href="/index.html" class="nav-link active">Home</a>
+<a href="/compare-foods.html" class="nav-link">Compare</a>
+<a href="/daily-vitamin-calculator.html" class="nav-link">Calculator</a>
+<a href="/favorites.html" class="nav-link">Favorites</a>
+<a href="/frontend/login.html" class="nav-link">Login</a>
+</nav>
+</header>
+
+<!-- HERO -->
+<section class="relative max-w-6xl mx-auto px-6 pt-16 pb-20 overflow-hidden">
+<div class="blob w-72 h-72 bg-primary -top-10 -right-10"></div>
+<div class="blob w-64 h-64 bg-accent bottom-0 left-0" style="animation-delay:2s"></div>
+
+<div class="relative z-10 text-center max-w-2xl mx-auto fade-up">
+<span class="badge mb-4">🌱 Eat smarter, feel better</span>
+<h1 class="font-display font-800 text-4xl md:text-6xl leading-tight mb-5">
+Know your food,<br><span style="color:var(--primary)">grow</span> your health
+</h1>
+<p class="text-[--text-soft] text-lg mb-8 max-w-lg mx-auto">Search any fruit, vegetable or nut and see exactly what's inside — vitamins, minerals, calories and more.</p>
+
+<div class="card flex p-2 max-w-lg mx-auto">
+<input id="searchInput" class="input border-0 focus:shadow-none" placeholder="Search mango, spinach, carrot…">
+<button id="searchBtn" class="btn btn-primary whitespace-nowrap">Search</button>
+</div>
+
+<div id="categoryChips" class="flex flex-wrap justify-center gap-2 mt-6"></div>
+</div>
+</section>
+
+<!-- POPULAR FOODS -->
+<section class="max-w-6xl mx-auto px-6 pb-20">
+<div class="flex items-end justify-between mb-6 fade-up">
+<h2 class="font-display font-700 text-2xl md:text-3xl">Popular foods</h2>
+<span id="resultCount" class="text-sm text-[--text-soft]"></span>
+</div>
+<div id="foodGrid" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+<div class="skeleton h-44"></div>
+<div class="skeleton h-44"></div>
+<div class="skeleton h-44"></div>
+<div class="skeleton h-44"></div>
+</div>
+</section>
+
+<footer class="site-footer">
+<div class="max-w-6xl mx-auto px-6 py-10 flex flex-col md:flex-row justify-between gap-2 text-sm">
+<p>© 2026 NutriVerse — Demo Nutrition Database</p>
+<p class="opacity-70">Data is illustrative, not medical advice.</p>
+</div>
+</footer>
+
+<script>
+let activeCategory = 'all';
+
+const menuBtn = document.getElementById('menuBtn');
+const mobileMenu = document.getElementById('mobileMenu');
+menuBtn.addEventListener('click', () => {
+  mobileMenu.classList.toggle('flex');
+  mobileMenu.classList.toggle('hidden');
+});
+
+function foodCard(f, i) {
+  const delay = 'fade-up-' + Math.min(8, (i % 8) + 1);
+  return `
+    <a href="/food-details.html?id=${f.id}" class="card card-hover ${delay} fade-up p-5 flex flex-col gap-2">
+      <div class="flex items-center justify-between">
+        <span class="text-4xl">${f.emoji || '🍽️'}</span>
+        <span class="badge badge-neutral">${f.category}</span>
+      </div>
+      <h3 class="font-display font-700 text-lg leading-none mt-1">${f.name}</h3>
+      <p class="text-sm text-[--text-soft]">${f.calories} kcal · ${(f.vitamins || []).slice(0, 1).join(', ')}</p>
+    </a>
+  `;
+}
+
+async function loadCategories() {
+  const res = await fetch('/api/categories');
+  const cats = await res.json();
+  const chipsEl = document.getElementById('categoryChips');
+  const all = ['all', ...cats];
+  chipsEl.innerHTML = all.map(c => `
+    <button data-cat="${c}" class="catChip chip ${c === 'all' ? 'active' : ''}">${c === 'all' ? 'All' : c}</button>
+  `).join('');
+  document.querySelectorAll('.catChip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeCategory = btn.dataset.cat;
+      document.querySelectorAll('.catChip').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      loadFoods(document.getElementById('searchInput').value);
+    });
+  });
+}
+
+async function loadFoods(query) {
+  const grid = document.getElementById('foodGrid');
+  const countEl = document.getElementById('resultCount');
+  try {
+    const params = new URLSearchParams();
+    if (query) params.set('q', query);
+    if (activeCategory !== 'all') params.set('category', activeCategory);
+    const res = await fetch(`/api/foods?${params.toString()}`);
+    const foods = await res.json();
+    countEl.textContent = `${foods.length} result${foods.length === 1 ? '' : 's'}`;
+    if (!foods.length) {
+      grid.innerHTML = '<div class="card p-10 col-span-full text-center text-[--text-soft]">No foods match. Try a different search or category.</div>';
+      return;
+    }
+    grid.innerHTML = foods.map(foodCard).join('');
+  } catch (err) {
+    grid.innerHTML = '<div class="card p-10 col-span-full text-center" style="color:#C2410C">Could not reach the server. Is it running?</div>';
+  }
+}
+
+document.getElementById('searchBtn').addEventListener('click', () => loadFoods(document.getElementById('searchInput').value));
+document.getElementById('searchInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') loadFoods(e.target.value); });
+document.getElementById('searchInput').addEventListener('input', (e) => { if (e.target.value === '') loadFoods(''); });
+
+loadCategories();
+loadFoods();
+</script>
+</body>
+</html>

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>document.documentElement.setAttribute('data-theme', localStorage.getItem('nv-theme') || 'light');</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NutriVerse — Vitamin Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: {
+    bg: '#F7FAF8', primary: '#1FAE7A', accent: '#FF8A65', text: '#1D2A24'
+  } } } }
+</script>
+<link rel="stylesheet" href="/css/theme.css">
+<script src="/js/theme.js" defer></script>
+</head>
+<body>
+
+<header class="site-header sticky top-0 z-30">
+<div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+<a href="/index.html" class="brand-mark text-2xl">🥗 NutriVerse</a>
+<nav class="hidden md:flex gap-8 items-center">
+<a href="/index.html" class="nav-link">Home</a>
+<a href="/compare-foods.html" class="nav-link">Compare</a>
+<a href="/daily-vitamin-calculator.html" class="nav-link active">Calculator</a>
+<a href="/favorites.html" class="nav-link">Favorites</a>
+<button class="themeToggleBtn icon-btn" aria-label="Toggle dark mode">🌙</button>
+</nav>
+<div class="flex items-center gap-2 md:hidden">
+<button class="themeToggleBtn icon-btn" aria-label="Toggle dark mode">🌙</button>
+<button id="menuBtn" class="btn btn-outline btn-sm" aria-label="Menu">☰</button>
+</div>
+</div>
+<nav id="mobileMenu" class="hidden md:hidden flex-col px-6 pb-4 gap-3">
+<a href="/index.html" class="nav-link">Home</a>
+<a href="/compare-foods.html" class="nav-link">Compare</a>
+<a href="/daily-vitamin-calculator.html" class="nav-link active">Calculator</a>
+<a href="/favorites.html" class="nav-link">Favorites</a>
+</nav>
+</header>
+
+<div class="max-w-2xl mx-auto px-6 py-10">
+<div class="fade-up mb-8 text-center">
+<h1 class="font-display font-800 text-3xl md:text-4xl mb-2">Daily vitamin calculator</h1>
+<p class="text-[--text-soft]">A quick, personalized estimate of what your body needs.</p>
+</div>
+
+<div class="card p-8 fade-up fade-up-1">
+<form id="calcForm" class="space-y-7">
+  <div>
+    <div class="flex justify-between text-sm mb-2"><span class="font-medium">Age</span><span style="color:var(--primary)" class="font-semibold" id="ageOut">25 yrs</span></div>
+    <input id="age" type="range" min="1" max="90" value="25" class="slider">
+  </div>
+  <div>
+    <div class="flex justify-between text-sm mb-2"><span class="font-medium">Weight</span><span style="color:var(--primary)" class="font-semibold" id="weightOut">60 kg</span></div>
+    <input id="weight" type="range" min="10" max="150" value="60" class="slider">
+  </div>
+  <div>
+    <label class="text-sm font-medium block mb-2">Gender</label>
+    <div class="flex gap-3" id="genderGroup">
+      <label class="genderOpt btn btn-primary flex-1"><input type="radio" name="gender" value="Male" checked class="hidden"> Male</label>
+      <label class="genderOpt btn btn-outline flex-1"><input type="radio" name="gender" value="Female" class="hidden"> Female</label>
+    </div>
+  </div>
+  <button type="submit" class="btn btn-primary w-full">Calculate</button>
+</form>
+
+<div id="resultBox" class="mt-8 hidden">
+  <div class="border-t border-[--border] pt-6">
+    <div class="flex justify-between items-baseline mb-2">
+      <span class="font-medium">Estimated nutrient coverage</span>
+      <span class="font-display font-800 text-3xl" style="color:var(--primary)" id="pctFigure">0%</span>
+    </div>
+    <div class="progress-track"><div id="progressFill" class="progress-fill"></div></div>
+  </div>
+  <div id="rdaTable" class="mt-6"></div>
+</div>
+<div id="errorBox" class="mt-4 text-sm hidden" style="color:#C2410C"></div>
+</div>
+</div>
+
+<footer class="site-footer">
+<div class="max-w-6xl mx-auto px-6 py-10 text-sm">© 2026 NutriVerse — Demo Nutrition Database</div>
+</footer>
+
+<script>
+const menuBtn = document.getElementById('menuBtn');
+const mobileMenu = document.getElementById('mobileMenu');
+menuBtn.addEventListener('click', () => {
+  mobileMenu.classList.toggle('flex');
+  mobileMenu.classList.toggle('hidden');
+});
+
+document.querySelectorAll('.genderOpt').forEach(label => {
+  label.addEventListener('click', () => {
+    document.querySelectorAll('.genderOpt').forEach(l => { l.classList.remove('btn-primary'); l.classList.add('btn-outline'); });
+    label.classList.remove('btn-outline');
+    label.classList.add('btn-primary');
+  });
+});
+
+const ageSlider = document.getElementById('age');
+const weightSlider = document.getElementById('weight');
+ageSlider.addEventListener('input', () => document.getElementById('ageOut').textContent = ageSlider.value + ' yrs');
+weightSlider.addEventListener('input', () => document.getElementById('weightOut').textContent = weightSlider.value + ' kg');
+
+document.getElementById('calcForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const age = ageSlider.value;
+  const weight = weightSlider.value;
+  const gender = document.querySelector('input[name="gender"]:checked').value;
+  const errorBox = document.getElementById('errorBox');
+  const resultBox = document.getElementById('resultBox');
+  errorBox.classList.add('hidden');
+
+  try {
+    const res = await fetch('/api/vitamin-calculator', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ age, gender, weight })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Something went wrong');
+
+    resultBox.classList.remove('hidden');
+    document.getElementById('pctFigure').textContent = data.estimatedIntakePercent + '%';
+    requestAnimationFrame(() => {
+      document.getElementById('progressFill').style.width = data.estimatedIntakePercent + '%';
+    });
+
+    const rows = Object.entries(data.recommended).map(([k, v]) => `
+      <div class="flex justify-between text-sm py-2 border-b border-[--border] last:border-0">
+        <span class="capitalize text-[--text-soft]">${k.replace(/([A-Z])/g, ' $1')}</span>
+        <span class="font-medium">${v} ${k === 'vitaminD' ? 'mcg' : 'mg'}</span>
+      </div>
+    `).join('');
+    document.getElementById('rdaTable').innerHTML = `
+      <h3 class="font-display font-700 text-lg mb-2">Recommended daily amounts</h3>
+      ${rows}
+      <p class="text-xs text-[--text-soft] mt-3">Simplified demo estimate — not medical advice.</p>
+    `;
+  } catch (err) {
+    errorBox.textContent = err.message;
+    errorBox.classList.remove('hidden');
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>document.documentElement.setAttribute('data-theme', localStorage.getItem('nv-theme') || 'light');</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NutriVerse — Settings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: {
+    bg: '#F7FAF8', primary: '#1FAE7A', accent: '#FF8A65', text: '#1D2A24'
+  } } } }
+</script>
+<link rel="stylesheet" href="/css/theme.css">
+<script src="/js/theme.js" defer></script>
+</head>
+<body id="pageBody" style="transition: background-color .3s ease, color .3s ease;">
+
+<header class="site-header sticky top-0 z-30">
+<div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+<a href="/index.html" class="brand-mark text-2xl">🥗 NutriVerse</a>
+<nav class="hidden md:flex gap-8 items-center">
+<a href="/frontend/admin-dashboard.html" class="nav-link">Admin</a>
+<a href="/index.html" class="nav-link">Home</a>
+</nav>
+<button id="menuBtn" class="md:hidden btn btn-outline btn-sm" aria-label="Menu">☰</button>
+</div>
+<nav id="mobileMenu" class="hidden md:hidden flex-col px-6 pb-4 gap-3">
+<a href="/frontend/admin-dashboard.html" class="nav-link">Admin</a>
+<a href="/index.html" class="nav-link">Home</a>
+</nav>
+</header>
+
+<div class="max-w-6xl mx-auto px-6 py-10">
+<h1 class="font-display font-800 text-3xl md:text-4xl mb-8 fade-up">Settings</h1>
+
+<div class="grid lg:grid-cols-3 gap-5 mb-10">
+<div class="card p-6 fade-up fade-up-1">
+<h2 class="font-display font-700 text-lg mb-4">🌙 Theme</h2>
+<div class="flex items-center justify-between">
+<span class="text-sm">Dark mode</span>
+<div id="darkToggle" class="toggle themeToggleSwitch"><div class="knob"></div></div>
+</div>
+</div>
+
+<div class="card p-6 fade-up fade-up-2">
+<h2 class="font-display font-700 text-lg mb-4">🌐 Language</h2>
+<select id="langSelect" class="input">
+<option value="bn">বাংলা</option>
+<option value="en">English</option>
+</select>
+</div>
+
+<div class="card p-6 fade-up fade-up-3">
+<h2 class="font-display font-700 text-lg mb-4">📊 Database</h2>
+<div class="progress-track mb-2"><div id="dbFill" class="progress-fill"></div></div>
+<p id="dbLabel" class="text-sm text-[--text-soft]">Loading…</p>
+</div>
+</div>
+
+<div class="fade-up fade-up-4">
+<h2 class="font-display font-700 text-2xl mb-4">✨ Upcoming premium features</h2>
+<div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+<div class="card card-hover p-5"><h3 class="font-medium">🤖 AI Food Detection</h3></div>
+<div class="card card-hover p-5"><h3 class="font-medium">📈 Nutrition Charts</h3></div>
+<div class="card card-hover p-5"><h3 class="font-medium">🔔 Health Reminders</h3></div>
+<div class="card card-hover p-5"><h3 class="font-medium">📱 Fully Responsive</h3></div>
+</div>
+</div>
+</div>
+
+<footer class="site-footer">
+<div class="max-w-6xl mx-auto px-6 py-10 text-sm">© 2026 NutriVerse — Demo Nutrition Database</div>
+</footer>
+
+<script>
+const menuBtn = document.getElementById('menuBtn');
+const mobileMenu = document.getElementById('mobileMenu');
+menuBtn.addEventListener('click', () => {
+  mobileMenu.classList.toggle('flex');
+  mobileMenu.classList.toggle('hidden');
+});
+
+async function loadDbCompletion() {
+  const res = await fetch('/api/stats');
+  const stats = await res.json();
+  const targetCatalogSize = 50;
+  const pct = Math.min(100, Math.round((stats.foods / targetCatalogSize) * 100));
+  requestAnimationFrame(() => { document.getElementById('dbFill').style.width = pct + '%'; });
+  document.getElementById('dbLabel').textContent = `${pct}% complete (${stats.foods} foods in database)`;
+}
+
+loadDbCompletion();
+</script>
+</body>
+</html>

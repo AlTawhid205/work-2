@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>document.documentElement.setAttribute('data-theme', localStorage.getItem('nv-theme') || 'light');</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NutriVerse — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: {
+    bg: '#F7FAF8', primary: '#1FAE7A', accent: '#FF8A65', text: '#1D2A24'
+  } } } }
+</script>
+<link rel="stylesheet" href="/css/theme.css">
+<script src="/js/theme.js" defer></script>
+</head>
+<body class="bg-bg">
+
+<div class="flex flex-col md:flex-row min-h-screen">
+<aside class="md:w-56 site-footer p-6 flex flex-wrap items-center gap-4 md:flex-col md:items-stretch md:gap-1">
+<a href="/index.html" class="brand-mark text-xl block md:mb-6" style="color:white">🥗 NutriVerse</a>
+<a href="/frontend/admin-dashboard.html" class="nav-link md:py-2" style="color:var(--primary)">Dashboard</a>
+<a href="/index.html" class="nav-link md:py-2" style="color:#C9D6CF">View site</a>
+<a href="/frontend/settings.html" class="nav-link md:py-2" style="color:#C9D6CF">Settings</a>
+<button class="themeToggleBtn icon-btn md:mt-3" aria-label="Toggle dark mode">🌙</button>
+</aside>
+
+<main class="flex-1 p-6 md:p-10">
+<h1 class="font-display font-800 text-3xl md:text-4xl mb-8 fade-up">Admin dashboard</h1>
+
+<div class="grid grid-cols-3 gap-3 md:gap-4 mb-10">
+<div class="card p-4 md:p-6 fade-up fade-up-1">
+<p class="text-xs md:text-sm text-[--text-soft]">Foods</p>
+<p class="font-display font-800 text-3xl md:text-4xl" style="color:var(--primary)" id="statFoods">–</p>
+</div>
+<div class="card p-4 md:p-6 fade-up fade-up-2">
+<p class="text-xs md:text-sm text-[--text-soft]">Users</p>
+<p class="font-display font-800 text-3xl md:text-4xl" style="color:var(--primary)" id="statUsers">–</p>
+</div>
+<div class="card p-4 md:p-6 fade-up fade-up-3">
+<p class="text-xs md:text-sm text-[--text-soft]">Categories</p>
+<p class="font-display font-800 text-3xl md:text-4xl" style="color:var(--primary)" id="statCategories">–</p>
+</div>
+</div>
+
+<div class="card p-6 mb-8 fade-up fade-up-2">
+<h2 class="font-display font-700 text-xl mb-4" id="formTitle">Add food</h2>
+<form id="foodForm" class="grid md:grid-cols-5 gap-3">
+<input type="hidden" id="editId">
+<input id="fName" class="input" placeholder="Name" required>
+<input id="fCategory" class="input" placeholder="Category" required>
+<input id="fCalories" type="number" class="input" placeholder="Calories" required>
+<input id="fEmoji" class="input" placeholder="Emoji" maxlength="2">
+<div class="flex gap-2">
+<button type="submit" class="btn btn-primary flex-1" id="submitBtn">Add</button>
+<button type="button" id="cancelEdit" class="btn btn-outline hidden">✕</button>
+</div>
+</form>
+</div>
+
+<div class="card p-6 fade-up fade-up-3">
+<h2 class="font-display font-700 text-xl mb-4">All foods</h2>
+<div class="overflow-x-auto">
+<table class="w-full text-sm min-w-[480px]">
+<thead><tr class="text-left text-xs text-[--text-soft] border-b border-[--border]">
+<th class="py-2">Name</th><th>Category</th><th>Calories</th><th class="text-right">Actions</th>
+</tr></thead>
+<tbody id="foodTableBody">
+<tr><td colspan="4" class="text-center py-8 text-[--text-soft]">Loading…</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</main>
+</div>
+
+<script>
+let editingId = null;
+
+async function loadStats() {
+  const res = await fetch('/api/stats');
+  const stats = await res.json();
+  document.getElementById('statFoods').textContent = stats.foods;
+  document.getElementById('statUsers').textContent = stats.users;
+  document.getElementById('statCategories').textContent = stats.categories;
+}
+
+async function loadFoods() {
+  const res = await fetch('/api/foods');
+  const foods = await res.json();
+  document.getElementById('foodTableBody').innerHTML = foods.map(f => `
+    <tr class="border-b border-[--border] last:border-0 hover:bg-[--primary-soft] smooth">
+      <td class="py-3">${f.emoji || ''} ${f.name}</td>
+      <td class="text-[--text-soft]">${f.category}</td>
+      <td class="font-medium">${f.calories} kcal</td>
+      <td class="text-right space-x-2">
+        <button class="btn btn-outline btn-sm editBtn" data-id="${f.id}">Edit</button>
+        <button class="btn btn-danger btn-sm deleteBtn" data-id="${f.id}">Delete</button>
+      </td>
+    </tr>
+  `).join('');
+
+  document.querySelectorAll('.deleteBtn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Delete this food?')) return;
+      await fetch(`/api/foods/${btn.dataset.id}`, { method: 'DELETE' });
+      refresh();
+    });
+  });
+
+  document.querySelectorAll('.editBtn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const res = await fetch(`/api/foods/${btn.dataset.id}`);
+      const f = await res.json();
+      editingId = f.id;
+      document.getElementById('fName').value = f.name;
+      document.getElementById('fCategory').value = f.category;
+      document.getElementById('fCalories').value = f.calories;
+      document.getElementById('fEmoji').value = f.emoji || '';
+      document.getElementById('formTitle').textContent = 'Edit food';
+      document.getElementById('submitBtn').textContent = 'Save';
+      document.getElementById('cancelEdit').classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  });
+}
+
+function resetForm() {
+  editingId = null;
+  document.getElementById('foodForm').reset();
+  document.getElementById('formTitle').textContent = 'Add food';
+  document.getElementById('submitBtn').textContent = 'Add';
+  document.getElementById('cancelEdit').classList.add('hidden');
+}
+
+function refresh() {
+  loadStats();
+  loadFoods();
+}
+
+document.getElementById('cancelEdit').addEventListener('click', resetForm);
+
+document.getElementById('foodForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const payload = {
+    name: document.getElementById('fName').value,
+    category: document.getElementById('fCategory').value,
+    calories: Number(document.getElementById('fCalories').value),
+    emoji: document.getElementById('fEmoji').value || '🍽️'
+  };
+
+  if (editingId) {
+    await fetch(`/api/foods/${editingId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  } else {
+    await fetch('/api/foods', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...payload, bnName: '' })
+    });
+  }
+  resetForm();
+  refresh();
+});
+
+refresh();
+</script>
+</body>
+</html>

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>document.documentElement.setAttribute('data-theme', localStorage.getItem('nv-theme') || 'light');</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NutriVerse — Food Details</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: {
+    bg: '#F7FAF8', primary: '#1FAE7A', accent: '#FF8A65', text: '#1D2A24'
+  } } } }
+</script>
+<link rel="stylesheet" href="/css/theme.css">
+<script src="/js/theme.js" defer></script>
+</head>
+<body>
+
+<header class="site-header sticky top-0 z-30">
+<div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+<a href="/index.html" class="brand-mark text-2xl">🥗 NutriVerse</a>
+<nav class="hidden md:flex gap-8 items-center">
+<a href="/index.html" class="nav-link">Home</a>
+<a href="/compare-foods.html" class="nav-link">Compare</a>
+<a href="/daily-vitamin-calculator.html" class="nav-link">Calculator</a>
+<a href="/favorites.html" class="nav-link">Favorites</a>
+<button class="themeToggleBtn icon-btn" aria-label="Toggle dark mode">🌙</button>
+</nav>
+<div class="flex items-center gap-2 md:hidden">
+<button class="themeToggleBtn icon-btn" aria-label="Toggle dark mode">🌙</button>
+<button id="menuBtn" class="btn btn-outline btn-sm" aria-label="Menu">☰</button>
+</div>
+</div>
+<nav id="mobileMenu" class="hidden md:hidden flex-col px-6 pb-4 gap-3">
+<a href="/index.html" class="nav-link">Home</a>
+<a href="/compare-foods.html" class="nav-link">Compare</a>
+<a href="/daily-vitamin-calculator.html" class="nav-link">Calculator</a>
+<a href="/favorites.html" class="nav-link">Favorites</a>
+</nav>
+</header>
+
+<div class="max-w-6xl mx-auto px-6 py-10" id="content">
+<div class="skeleton h-96"></div>
+</div>
+
+<footer class="site-footer">
+<div class="max-w-6xl mx-auto px-6 py-10 text-sm">© 2026 NutriVerse — Demo Nutrition Database</div>
+</footer>
+
+<script>
+function getId() {
+  return new URLSearchParams(window.location.search).get('id') || '1';
+}
+
+const menuBtn = document.getElementById('menuBtn');
+const mobileMenu = document.getElementById('mobileMenu');
+menuBtn.addEventListener('click', () => {
+  mobileMenu.classList.toggle('flex');
+  mobileMenu.classList.toggle('hidden');
+});
+
+function macroBar(label, value, unit, pct, color) {
+  return `
+    <div>
+      <div class="flex justify-between text-sm mb-1"><span>${label}</span><span class="font-medium">${value}${unit}</span></div>
+      <div class="progress-track"><div class="progress-fill" data-pct="${pct}" style="background:${color}"></div></div>
+    </div>
+  `;
+}
+
+async function loadFood() {
+  const content = document.getElementById('content');
+  try {
+    const [foodRes, favRes] = await Promise.all([fetch(`/api/foods/${getId()}`), fetch('/api/favorites')]);
+    if (!foodRes.ok) throw new Error('not found');
+    const f = await foodRes.json();
+    const favs = await favRes.json();
+    const isFav = favs.some(x => x.id === f.id);
+    const maxMacro = Math.max(f.protein, f.fat, f.carbs, 1);
+
+    content.innerHTML = `
+      <a href="/index.html" class="nav-link inline-flex items-center gap-1 mb-6 fade-up">← Back to all foods</a>
+      <div class="grid lg:grid-cols-5 gap-6">
+
+        <div class="lg:col-span-2 space-y-6">
+          <div class="card p-8 text-center fade-up">
+            <div class="text-7xl mb-3 pop">${f.emoji || '🍽️'}</div>
+            <h1 class="font-display font-800 text-3xl">${f.name}</h1>
+            <p class="text-[--text-soft] mb-5">${f.bnName || ''} · ${f.category}</p>
+            <button id="favBtn" class="btn ${isFav ? 'btn-danger' : 'btn-primary'} w-full">
+              ${isFav ? '♥ Remove from Favorites' : '♡ Add to Favorites'}
+            </button>
+          </div>
+
+          <div class="card p-6 fade-up fade-up-1">
+            <h3 class="font-display font-700 text-lg mb-3" style="color:var(--primary)">Health Benefits</h3>
+            <ul class="space-y-2 text-sm">${(f.benefits || []).map(b => `<li class="flex gap-2"><span style="color:var(--primary)">✓</span>${b}</li>`).join('')}</ul>
+          </div>
+
+          <div class="card p-6 fade-up fade-up-2">
+            <h3 class="font-display font-700 text-lg mb-3" style="color:#C2410C">Possible Side Effects</h3>
+            <ul class="space-y-2 text-sm">${(f.sideEffects || []).map(s => `<li class="flex gap-2"><span>⚠</span>${s}</li>`).join('')}</ul>
+          </div>
+
+          <div class="card p-6 fade-up fade-up-3">
+            <h3 class="font-display font-700 text-lg mb-2">How to Eat</h3>
+            <p class="text-sm text-[--text-soft]">${f.howToEat || '-'}</p>
+          </div>
+        </div>
+
+        <div class="lg:col-span-3 space-y-6">
+          <div class="card p-8 fade-up fade-up-1">
+            <div class="flex items-baseline justify-between mb-6">
+              <h2 class="font-display font-700 text-lg">Nutrition per 100g</h2>
+              <div class="text-right">
+                <span class="font-display font-800 text-5xl" style="color:var(--primary)">${f.calories}</span>
+                <span class="text-[--text-soft] text-sm block -mt-1">calories</span>
+              </div>
+            </div>
+            <div class="space-y-4">
+              ${macroBar('Protein', f.protein, 'g', Math.round(f.protein / maxMacro * 100), '#1FAE7A')}
+              ${macroBar('Fat', f.fat, 'g', Math.round(f.fat / maxMacro * 100), '#FF8A65')}
+              ${macroBar('Carbs', f.carbs, 'g', Math.round(f.carbs / maxMacro * 100), '#38BDF8')}
+              ${macroBar('Fiber', f.fiber, 'g', Math.round(f.fiber / maxMacro * 100), '#A78BFA')}
+            </div>
+            <div class="grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-[--border] text-sm">
+              <div class="flex justify-between"><span class="text-[--text-soft]">Sugar</span><span class="font-medium">${f.sugar ?? 0}g</span></div>
+              <div class="flex justify-between"><span class="text-[--text-soft]">Sodium</span><span class="font-medium">${f.sodium ?? 0}mg</span></div>
+            </div>
+          </div>
+
+          <div class="card p-6 fade-up fade-up-2">
+            <h3 class="font-display font-700 text-lg mb-4">Daily value coverage</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+              <div><div class="font-display font-800 text-2xl" style="color:var(--primary)">${f.vitaminC ?? 0}%</div><div class="text-xs text-[--text-soft] mt-1">Vitamin C</div></div>
+              <div><div class="font-display font-800 text-2xl" style="color:var(--primary)">${f.calciumDV ?? 0}%</div><div class="text-xs text-[--text-soft] mt-1">Calcium</div></div>
+              <div><div class="font-display font-800 text-2xl" style="color:var(--primary)">${f.ironDV ?? 0}%</div><div class="text-xs text-[--text-soft] mt-1">Iron</div></div>
+              <div><div class="font-display font-800 text-2xl" style="color:var(--primary)">${f.potassiumDV ?? 0}%</div><div class="text-xs text-[--text-soft] mt-1">Potassium</div></div>
+            </div>
+            <p class="text-xs text-[--text-soft] mt-4">% Daily Values based on a 2,000 calorie diet. Demo figures — not medical advice.</p>
+          </div>
+
+          <div class="card p-6 fade-up fade-up-3">
+            <h3 class="font-display font-700 text-lg mb-3">Vitamins</h3>
+            <div class="flex flex-wrap gap-2">${(f.vitamins || []).map(v => `<span class="badge">${v}</span>`).join('')}</div>
+          </div>
+
+          <div class="card p-6 fade-up fade-up-4">
+            <h3 class="font-display font-700 text-lg mb-3">Minerals</h3>
+            <div class="flex flex-wrap gap-2">${(f.minerals || []).map(m => `<span class="badge badge-neutral">${m}</span>`).join('')}</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    requestAnimationFrame(() => {
+      document.querySelectorAll('.progress-fill').forEach(el => {
+        el.style.width = el.dataset.pct + '%';
+      });
+    });
+
+    document.getElementById('favBtn').addEventListener('click', async () => {
+      await fetch(`/api/favorites/${f.id}`, { method: isFav ? 'DELETE' : 'POST' });
+      loadFood();
+    });
+  } catch (err) {
+    content.innerHTML = '<div class="card p-12 text-center"><p class="font-display font-700 text-2xl mb-2">Food not found</p><a href="/index.html" class="nav-link">← Back to all foods</a></div>';
+  }
+}
+
+loadFood();
+</script>
+</body>
+</html>
